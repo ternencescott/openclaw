@@ -1389,11 +1389,18 @@ export const chatHandlers: GatewayRequestHandlers = {
     }
     let parsedMessage = inboundMessage;
     let parsedImages: ChatImageContent[] = [];
+    const rawSessionKey = p.sessionKey;
+    const { cfg, entry, canonicalKey: sessionKey } = loadSessionEntry(rawSessionKey);
     if (normalizedAttachments.length > 0) {
+      // Resolve workspace directory from agent config for saving binary uploads
+      const agentDefaults = (cfg as Record<string, unknown>)?.agents as Record<string, unknown> | undefined;
+      const defaultAgent = agentDefaults?.defaults as Record<string, unknown> | undefined;
+      const workspaceDir = typeof defaultAgent?.workspace === "string" ? defaultAgent.workspace : undefined;
       try {
         const parsed = await parseMessageWithAttachments(inboundMessage, normalizedAttachments, {
           maxBytes: 5_000_000,
           log: context.logGateway,
+          workspaceDir,
         });
         parsedMessage = parsed.message;
         parsedImages = parsed.images;
@@ -1402,8 +1409,6 @@ export const chatHandlers: GatewayRequestHandlers = {
         return;
       }
     }
-    const rawSessionKey = p.sessionKey;
-    const { cfg, entry, canonicalKey: sessionKey } = loadSessionEntry(rawSessionKey);
     const timeoutMs = resolveAgentTimeoutMs({
       cfg,
       overrideMs: p.timeoutMs,

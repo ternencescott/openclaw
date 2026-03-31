@@ -185,11 +185,27 @@ export async function parseMessageWithAttachments(
       continue;
     }
 
-    // Non-image, non-text: drop with warning
-    log?.warn(`attachment ${label}: unsupported type (${effectiveMime}), dropping`);
+    // Binary file — save to workspace/uploads/ and tell the AI
+    if (opts?.workspaceDir) {
+      try {
+        const uploadsDir = nodePath.join(opts.workspaceDir, "uploads");
+        fs.mkdirSync(uploadsDir, { recursive: true });
+        const safeFileName = label.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const filePath = nodePath.join(uploadsDir, safeFileName);
+        fs.writeFileSync(filePath, Buffer.from(b64, "base64"));
+        textParts.push(
+          `\n\n[Binary file uploaded by user: ${label} (${effectiveMime}, ${estimateBase64DecodedBytes(b64)} bytes) saved to ${filePath}]`,
+        );
+      } catch (err) {
+        log?.warn(`attachment ${label}: failed to save binary file: ${String(err)}`);
+      }
+    } else {
+      log?.warn(`attachment ${label}: unsupported type (${effectiveMime}), no workspace to save, dropping`);
+    }
   }
 
-  return { message: message + textParts.join(""), images };
+  const finalMessage = textParts.length > 0 ? message + textParts.join("") : message;
+  return { message: finalMessage, images };
 }
 
 /**
