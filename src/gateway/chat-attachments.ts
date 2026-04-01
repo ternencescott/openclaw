@@ -163,10 +163,9 @@ export async function parseMessageWithAttachments(
           fs.mkdirSync(uploadsDir, { recursive: true });
           const safeFileName = label.replace(/[^a-zA-Z0-9._-]/g, "_");
           const filePath = nodePath.join(uploadsDir, safeFileName);
-          const relPath = nodePath.relative(opts.workspaceDir, filePath);
           fs.writeFileSync(filePath, Buffer.from(b64, "base64"));
           const sizeKB = Math.round(estimateBase64DecodedBytes(b64) / 1024);
-          textParts.push(`\n\n[Image file uploaded: ${label} (${sizeKB}KB) saved to workspace at: ${relPath}]`);
+          textParts.push(`\n\n[Image file uploaded: ${label} (${sizeKB}KB) saved to workspace at: ${filePath}]`);
         } catch (err) {
           log?.warn(`attachment ${label}: failed to save image file: ${String(err)}`);
         }
